@@ -2,62 +2,88 @@ package id.dojo.models;
 
 import com.google.gson.Gson;
 import id.dojo.Utils;
-import org.sql2o.Connection;
+import id.dojo.dto.ActorDto;
+import id.dojo.helper.DatabaseUtils;
 import org.sql2o.Sql2o;
-import org.sql2o.Sql2oException;
 
 import java.sql.Timestamp;
-import java.util.List;
 
 import static id.dojo.PgConnection.getSql2o;
 
 public class Actor {
-    static Gson gson = new Gson();
     private Long actor_id;
     private String first_name;
     private String last_name;
     private Timestamp last_update;
+
+    static Gson gson = new Gson();
     static Sql2o sql2o = getSql2o();
 
-    public Long getActor_id() {
-        return actor_id;
-    }
-
-    public void setActor_id(Long actor_id) {
-        this.actor_id = actor_id;
-    }
-
-    public String getFirst_name() {
-        return first_name;
-    }
-
-    public void setFirst_name(String first_name) {
-        this.first_name = first_name;
-    }
-
-    public String getLast_name() {
-        return last_name;
-    }
-
-    public void setLast_name(String last_name) {
-        this.last_name = last_name;
-    }
+    final static String TABLE_NAME = "actor";
+    final static String ID_NAME = "actor_id";
 
     @Override
     public String toString() {
-        // return "( " + actor_id + ", " + first_name + ", " + last_name + ", " + last_update + " )";
         return Utils.showString(actor_id.toString(), first_name, last_name, last_update.toString());
     }
 
     public static String listActors(){
-        try (Connection con = sql2o.open()){
-            String query = "SELECT actor_id, first_name, last_name, last_update FROM actor";
-            List<Actor> actors = con.createQuery(query).executeAndFetch(Actor.class);
-            Response<List<Actor>> results = new Response<>(200,"Berhasil mandapatkan data actor", actors);
-            return gson.toJson(results);
-        }catch (Sql2oException sql2oException){
-            System.out.println(sql2oException.toString());
-            return null;
-        }
+        return DatabaseUtils.get(
+                "SELECT actor_id, first_name, last_name, last_update FROM actor",
+                "list",
+                Actor.class
+        );
+    }
+
+    public static String detailActor(String id){
+        return DatabaseUtils.get(
+                String.format("SELECT * FROM actor WHERE actor_id = %s", id),
+                "detail",
+                Actor.class
+        );
+    }
+
+    public static String deleteActor(String actor_id){
+        int id = Integer.parseInt(actor_id);
+
+        return DatabaseUtils.delete(
+                String.format("DELETE FROM actor WHERE actor_id = %s", id),
+                TABLE_NAME,
+                ID_NAME,
+                id,
+                Actor.class
+        );
+    }
+
+    public static String addActor(ActorDto actorDto){
+        String query = String.format(
+                "INSERT INTO actor(first_name, last_name) VALUES('%s', '%s')",
+                actorDto.first_name,
+                actorDto.last_name
+        );
+
+        return DatabaseUtils.addAndUpdate(query);
+    }
+
+    public static String updateActor(ActorDto actorDto){
+        String query = String.format(
+                "UPDATE actor SET first_name = '%s', last_name = '%s' WHERE actor_id = %s",
+                actorDto.first_name,
+                actorDto.last_name,
+                actorDto.actor_id
+        );
+
+        return DatabaseUtils.addAndUpdate(query);
+    }
+
+    public static Response<Actor> getActorById(Integer actor_id){
+        return DatabaseUtils.get2(
+                """
+                        SELECT * FROM actor
+                        WHERE actor_id = :p1;
+                        """,
+                actor_id,
+                Actor.class
+        );
     }
 }

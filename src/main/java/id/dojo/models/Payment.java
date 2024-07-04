@@ -29,8 +29,7 @@ public class Payment {
         try (Connection con = sql2o.open()){
             String query = "SELECT * FROM payment";
             List<Payment> payments = con.createQuery(query).executeAndFetch(Payment.class);
-            Response<List<Payment>> results = new Response<>(200,"Berhasil mandapatkan data payment", payments);
-            return results;
+            return new Response<>(200,"Berhasil mandapatkan data payment", payments);
         }catch (Sql2oException sql2oException){
             System.out.println(sql2oException.toString());
             return null;
